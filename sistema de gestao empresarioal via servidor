@@ -1,0 +1,533 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include <cstdlib>// Necessário para usar a função system() PING SERVIDOR
+
+
+#define IP_SERVIDOR "192.168.0.101"
+#define MAX 9998 //Quantidade do estoque
+
+
+//======================================================== CASE - 1 ===========================================================================
+void cadastro(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX]) 
+{
+    int menu; 
+    
+    system("cls");
+
+    
+    if (*total_produtos < MAX) 
+	{
+        printf("\t================ CADASTRAR PRODUTO ================\n");
+        printf("\t* CODIGO GERADO -> %d\n", *total_produtos);
+            
+        codigo[*total_produtos] = *total_produtos;
+            
+        printf("\t* DIGITE O NOME DO PRODUTO -> ");    
+        scanf("%29s", nome_produto[*total_produtos]); 
+
+        printf("\t* DIGITE O PRECO DO PRODUTO -> R$ ");    
+        scanf("%f", &preco[*total_produtos]);
+ 
+        printf("\t* DIGITE A QUANTIDADE EM ESTOQUE -> ");    
+        scanf("%d", &qt_estoque[*total_produtos]); 
+            
+        (*total_produtos)++; 
+            
+        if (*total_produtos >= MAX) 
+		{ 
+            printf("\n\t[AVISO] Limite de armazenamento atingido (%d produtos)!\n", MAX);
+            system("pause");
+            return; 
+        }
+
+        printf("\n\t CADASTRAR OUTRO PRODUTO? [1-SIM / 2-NAO] -> ");
+        scanf("%d", &menu);        
+                
+        while ((menu == 1) && (*total_produtos < MAX)) 
+		{
+            system("cls");
+                
+            printf("\t================ CADASTRAR PRODUTO ================\n");
+            printf("\t* CODIGO GERADO -> %d\n", *total_produtos);
+              
+            codigo[*total_produtos] = *total_produtos;
+                   
+            printf("\t* DIGITE O NOME DO PRODUTO -> ");    
+            scanf("%29s", nome_produto[*total_produtos]); 
+
+            printf("\t* DIGITE O PRECO DO PRODUTO -> R$ ");    
+            scanf("%f", &preco[*total_produtos]);
+ 
+            printf("\t* DIGITE A QUANTIDADE EM ESTOQUE -> ");    
+            scanf("%d", &qt_estoque[*total_produtos]); 
+            
+            (*total_produtos)++; 
+               
+            if (*total_produtos < MAX) {
+                printf("\n\t CADASTRAR OUTRO PRODUTO? [1-SIM / 2-NAO] -> ");
+                scanf("%d", &menu);                                           
+            } 
+			else 
+			{
+				
+                printf("\n\t[AVISO] Limite de armazenamento atingido (%d produtos)!\n", MAX);
+                system("pause");
+            }
+        }                   
+    }     
+	else 
+	{
+        printf("\n\t<<< ESTOQUE CHEIO! Nao e possivel cadastrar mais produtos >>>\n");    
+        system("pause");
+    }
+}
+
+//==================================================== CASE - 2 =========================================================================================================
+
+void venda(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX],float *saldo_caixa)
+{
+    system("cls");
+    
+    
+    int cod_pesquisa, qt_venda,  achou = 0;
+    float total_venda;
+    
+    printf("\t================ VENDAS ================\n");
+    printf("\t* CODIGO DO PRODUTO -> ");	
+    scanf("%d", &cod_pesquisa);	
+
+    system("cls");
+    
+    
+    for(int i = 1; i < *total_produtos; i++)
+    {
+        if(cod_pesquisa == codigo[i]) 
+        {
+            achou = 1; // Marca que o produto existe no sistema
+            
+            printf("\n\t======================= PRODUTO ENCONTRADO ===========================\n");
+            printf("\t%-20s \t%-10s \t%-12s \t%-10s\n", "NOME DO PRODUTO", "CODIGO", "PRECO", "ESTOQUE ATUAL");     
+            printf("\t======================================================================\n");
+            printf("\t%-20s \t#%03d      \tR$ %-10.2f \t%d Un\n", nome_produto[i], codigo[i], preco[i], qt_estoque[i]);
+            printf("\t----------------------------------------------------------------------\n");
+            
+            printf("\n\t* DIGITE A QUANTIDADE PARA VENDA -> ");   
+            scanf("%d", &qt_venda);
+            
+            if(qt_venda <= qt_estoque[i]) // Valida se há estoque suficiente
+            {
+                qt_estoque[i] -= qt_venda; 
+                total_venda = qt_venda * preco[i];
+                *saldo_caixa += total_venda;
+                
+                printf("\n\t[SUCESSO] Venda realizada com sucesso!\n");
+                printf("\tTOTAL A PAGAR: R$ %.2f\n\n\n\n\n", total_venda);
+            }
+            else
+            {
+                printf("\n\t[ERRO] Estoque insuficiente! Operacao cancelada.\n\n\n\n\n");
+            }
+            
+            system("pause > nul"); 
+            break;
+        }
+    }                     
+
+    if(achou == 0) // Se o loop terminou e a variável 'achou' continuar em 0
+    {
+        printf("\n\t[AVISO] PRODUTO NAO ENCONTRADO NO SISTEMA!\n\n\n\n\n"); 
+        system("pause");	
+    }
+}
+//==================================================== CASE - 3 =========================================================================================================
+
+void compra(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX])
+{
+				int cod_pesquisa, qt_compra, achou = 0;		
+				
+				system("cls");
+                printf("\t================ COMPRA ================\n");
+                printf("\t* CODIGO DO PRODUTO -> ");	
+           		scanf("%d", &cod_pesquisa);	
+			
+				achou = 0; // Variável de controle (0 = não encontrado, 1 = encontrado)
+    
+                system("cls");
+    			for(int i = 1; i < *total_produtos; i++)
+    			{
+        
+        			if(cod_pesquisa == codigo[i]) 
+        			{
+            			achou = 1; // Marca que o produto existe no sistema
+            
+           				 printf("\n\t======================= PRODUTO ENCONTRADO ===========================\n");
+           				 printf("\t%-20s \t%-10s \t%-12s \t%-10s\n", "NOME DO PRODUTO", "CODIGO", "PRECO", "ESTOQUE ATUAL");     
+           				 printf("\t======================================================================\n");
+            			 printf("\t%-20s \t#%03d      \tR$ %-10.2f \t%d Un\n", nome_produto[i], codigo[i], preco[i], qt_estoque[i]);
+            			 printf("\t----------------------------------------------------------------------\n");
+            
+           
+            			 printf("\n\t* DIGITE A QUANTIDADE PARA COMPRAR -> ");   
+            			 scanf("%d", &qt_compra);
+            			 
+            			 printf("\t* DIGITE O PRECO DO PRODUTO -> R$ ");	
+                         scanf("%f", &preco[i]);
+            
+            
+                        qt_estoque[i] += qt_compra; 
+               				 
+                
+               			printf("\n\t           [SUCESSO] \n\n\n\n\n\n\n");
+                            
+                    }
+                }
+              
+                if(achou == 0) // Se o loop terminou e a variável 'achou' continuar em 0, significa que rodou tudo e não existia
+                {
+                    printf("\n\t[AVISO] PRODUTO NAO ENCONTRADO NO SISTEMA!\n\n\n\n\n\n"); 
+                    system("pause");	
+                }  
+}
+
+//==================================================== CASE - 4 =========================================================================================================
+void consulta(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX]) 
+{
+	 system("cls");
+     
+    printf("==================================== CONSULTA ==================================\n");
+    printf("\t%-20s \t%-10s \t%-12s \t%-10s\n", "NOME DO PRODUTO", "CODIGO", "PRECO", "ESTOQUE");     
+    printf("================================================================================\n");
+    
+    
+    if (*total_produtos > 1)
+    {
+        
+        for (int i = 1; i < *total_produtos; i++)	
+        {
+           
+            printf("\t%-20s \t#%03d      \tR$ %-10.2f \t%d Un\n", nome_produto[i], codigo[i], preco[i], qt_estoque[i]);	
+            printf("--------------------------------------------------------------------------------\n");
+        }
+    }
+    else
+    {
+        printf("\n\n\n\n\n\t\t\t    NAO HA PRODUTOS CADASTRADOS\n\n\n\n\n\n\n\a");    
+        printf("================================================================================\n");
+    }
+   
+    printf("\n");
+    system("pause");
+}
+
+//=========================================================== case 5 ===============================================================================================================
+
+void caixa(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre )
+{
+    system("cls");
+    
+    int menu;
+    
+    if(*saldo_caixa <= 0)
+    {
+        printf("\n\n\n\t=====================================================\n\n");
+		printf("\t    [AVISO] Nenhuma venda foi realizada neste dia.\n\n");
+        system("pause > nul");
+	}
+    else
+    {
+    	printf("\n\n\n\t======================== CAIXA =====================\n\n");
+    	printf("\t  VALOR TOTAL ACUMULADO EM VENDAS: R$ %.2f\n", *saldo_caixa);
+   	   	printf("\t=====================================================\n");
+				
+		printf("\n\t GOSTARIA DE FECHAR O CAIXA DO DIA ? [1-SIM / 2-NAO] -> ");
+        
+		scanf("%d",&menu);
+	    if(menu == 1) 
+        {
+    		*cofre += *saldo_caixa;
+            *saldo_caixa = 0; // Zera o caixa atual após mover para o cofre
+    	
+		 printf("\n\t\t\tSalvando informacoes no servidor...\n\a");
+    
+            FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\dados.txt", "w");
+    
+            if (arquivo_escrita != NULL) 
+            {
+                fprintf(arquivo_escrita, "%.2f\n", *saldo_caixa);
+                fprintf(arquivo_escrita, "%.2f\n", *cofre);
+                fprintf(arquivo_escrita, "%d\n", *total_produtos); 
+                
+                for (int i = 1; i < *total_produtos; i++) 
+                {
+                    fprintf(arquivo_escrita, "%d %s %.2f %d\n", codigo[i], nome_produto[i], preco[i], qt_estoque[i]);
+                }
+                
+                fclose(arquivo_escrita);
+                printf("\n\t\t[OK] Dados salvos no servidor com sucesso!\n\n\n\n\n\n\n");
+                system("pause");
+            } 
+            else
+            {
+                printf("\n\t\t[ERRO] Sem permissao de escrita ou servidor offline!\n\n\n\n\n\n\n");
+                system("pause");
+            }
+    	
+    	
+    	
+	    }
+    
+    }
+
+}
+//=========================================================== case 6 ===============================================================================================================
+void cofre_caixa(const float *cofre)
+{
+   system("cls");
+	
+    
+    printf("\n\t\033[1;32m=====================================================\033[0m\n");
+    printf("\t\t\t   SALDO DO COFRE                    \n");
+    printf("\t\033[1;32m=====================================================\033[0m\n\n");
+    
+    if (cofre != NULL) {
+        printf("\t\tVALOR TOTAL RETIDO: \033[1;32mR$ %.2f\033[0m REAIS\n\n", *cofre);
+    }
+    
+    printf("\t\033[1;32m=====================================================\033[0m\n\t");
+    printf("Pressione ENTER para voltar ao menu...");
+    
+   system("pause > nul"); 
+}
+
+
+//=========================================================== case 8 ===============================================================================================================
+
+void consulta_financeira(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX]) 
+{
+	system("cls");
+     
+                float valor_produto, valor_total_estoque;
+                
+				printf("========================================== CONSULTA FINANCEIRA ================================================\n");
+                printf("\t%-20s \t%-10s \t%-12s \t%-10s \t%-15s\n", "NOME DO PRODUTO", "CODIGO", "PRECO", "ESTOQUE", "VALOR INVESTIDO");     
+                printf("===============================================================================================================\n");
+           
+		        for(int i = 1; i < *total_produtos ; i++)	 
+			    {
+        
+                     valor_produto = qt_estoque[i] * preco[i];
+                     valor_total_estoque += valor_produto;
+
+                     printf("\t%-20s \t#%03d      \tR$ %-10.2f \t%d Un     \tR$ %.2f\n", nome_produto[i], codigo[i], preco[i], qt_estoque[i], valor_produto);	
+                     printf("\  -------------------------------------------------------------------------------------------------------\n");
+                 }    
+                 
+				 printf("\n");
+                 printf("\t           VALOR TOTAL DO ESTOQUE ACUMULADO NO SISTEMA: R$ %.2f  \n\n", valor_total_estoque);
+                 printf("================================================================================================================\n");
+                 printf("\n");
+                 system("pause");
+	
+	
+	
+	
+}
+
+//====================================================================== CARREGAR ====================================================================================================
+void carregar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre)
+{
+   
+    //FILE *arquivo_leitura = fopen("dados.txt", "r");//CARREGAR O ARQUIVO DO PC LOCAL
+	FILE *arquivo_leitura = fopen("\\\\192.168.0.101\\dados\\dados.txt", "r");
+    
+    if (arquivo_leitura != NULL) 
+    {
+        if (fscanf(arquivo_leitura, "%f\n", saldo_caixa) != EOF && 
+            fscanf(arquivo_leitura, "%f\n", cofre) != EOF &&
+            fscanf(arquivo_leitura, "%d\n", total_produtos) != EOF) 
+            
+        {
+            for (int i = 1; i < *total_produtos; i++) 
+            {
+                fscanf(arquivo_leitura, "%d %29s %f %d\n", &codigo[i], nome_produto[i], &preco[i], &qt_estoque[i]);
+            }
+        }
+        fclose(arquivo_leitura);
+        printf("\n\t\t[SUCESSO] Dados carregados do servidor com exito!\n\n\n\n\n\n\n");
+        system("pause > nul");
+    }
+    else
+    {
+        printf("\n\t\t[AVISO] Nao foi possivel conectar ao servidor ou o arquivo nao existe.\n");
+        system("pause > nul");
+    }
+}
+//======================================================================= SALVAR ===================================================================================================
+void salvar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre)
+{
+    printf("\n\t\t\tSalvando informacoes no servidor...\n\a");
+    
+    //FILE *arquivo_escrita = fopen("dados.txt", "w");//SALVA O ARQUIVO NO PC LOCAL
+    FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\dados.txt", "w");
+    
+    if (arquivo_escrita != NULL) 
+    {
+        fprintf(arquivo_escrita, "%f\n", *saldo_caixa);
+		fprintf(arquivo_escrita, "%f\n", *cofre);
+		fprintf(arquivo_escrita, "%d\n", *total_produtos); 
+        
+        for (int i = 1; i < *total_produtos; i++) 
+        {
+            fprintf(arquivo_escrita, "%d %s %.2f %d\n", codigo[i], nome_produto[i], preco[i], qt_estoque[i]);
+        }
+        
+        fclose(arquivo_escrita);
+        printf("\n\t\t[OK] Dados salvos no servidor com sucesso!\n\n\n\n\n\n\n");
+        system("pause");
+    } 
+    else
+    {
+        printf("\n\t\t[ERRO] Sem permissao de escrita ou servidor offline!\n\n\n\n\n\n\n");
+        system("pause");
+    }
+}
+
+
+
+//======================================================================= ping ===================================================================================================
+void ping() 
+{
+    // Define o comando. No Windows, 'ping -n 1' envia apenas 1 pacote.
+   
+    char comando[100];
+    
+	sprintf(comando, "ping -n 1 %s > nul", IP_SERVIDOR);
+    
+    printf("\n\n\n\n\t\tVerificando conexao com o servidor [%s]...", IP_SERVIDOR);
+    
+    // Executa o comando. Se o servidor responder, o retorno é 0.
+    int status = system(comando);
+    
+    printf("\n\t\t--------------------------------------------------\n");
+    if (status == 0) 
+    {
+        printf("\n\t\t[ONLINE] O servidor esta respondendo normalmente!\n");
+        printf("\t        Pode carregar ou salvar os arquivos com seguranca.\n");
+    } 
+    else 
+    {
+        printf("\n\t\t[OFFLINE] Erro! Nao foi possivel alcancar o servidor.\n");
+        printf("\t        Verifique os cabos, o IP ou se o Samba esta rodando.\n");
+    }
+        
+    system("pause > nul");
+}
+
+//==================================================================================================
+
+
+
+int main()
+{
+	system("color 17");
+    
+	char nome_produto[MAX][30]; 
+    int codigos[MAX], estoques[MAX], total_produtos = 1, menu;
+    float precos[MAX], saldo_caixa, cofre ;
+        
+	ping(); 
+    carregar(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
+    
+	do
+    {
+      	
+	  system("color 0B");
+	  system("cls");
+	  printf("\n\n");	
+	  printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");
+	  printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");	
+      printf("\t°°              <<< SISTEMA DE GESTAO EMPRESARIAL >>>                  °°\n");
+	  printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");	
+      printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");
+	  printf("\t°°                                °°                                   °°\n");
+      printf("\t°°          1 - CADASTRAR         °°        6 - ESTOQUE                °°\n");
+	  printf("\t°°                                °°                                   °°\n");
+	  printf("\t°°          2 - VENDA             °°        7 -                        °°\n");
+	  printf("\t°°                                °°                                   °°\n");
+	  printf("\t°°          3 - COMPRAR           °°        8 -                        °°\n");
+	  printf("\t°°                                °°                                   °°\n");	
+	  printf("\t°°          4 - CAIXA             °°        9 - RELATORIO              °°\n");	
+	  printf("\t°°                                °°                                   °°\n");
+	  printf("\t°°          5 - COFRE             °°        0- SAIR                    °°\n");	
+	  printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");
+	  printf("\t°°                                                       <<FredBenz>>  °°\n");	
+      printf("\t°°                                                           V4.00.b   °°\n");	
+	  printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");
+      printf("\t°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\n");
+	  printf("\t- ");	 
+	  scanf("%d",&menu);
+	  
+	  switch(menu)
+	 {
+			
+	    case 1: //CADASTRO DOS PRODUTOS
+    		
+    		 cadastro(&total_produtos, codigos, nome_produto, precos, estoques);
+    		 salvar(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
+        	
+		break;
+        	
+		case 2: //VENDA
+        	 
+        	 venda(&total_produtos, codigos, nome_produto, precos, estoques, &saldo_caixa);
+        	 salvar(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
+        break;	
+		
+		case 3: //COMPRA
+			 compra(&total_produtos, codigos, nome_produto, precos, estoques);
+        	 salvar(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
+		
+		break;	
+		
+		case 4:
+			  caixa(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
+		break;	
+		
+		case 5 :
+			cofre_caixa(&cofre);
+		break;	
+		
+		case 6: // CONSULTA ESTOQUE, CODIGO E PREÇO
+    	 
+    	 	consulta(&total_produtos, codigos, nome_produto, precos, estoques);
+    
+        break;
+        
+		
+		case 7:
+        	
+        	
+		break;
+        	
+        case 8:
+        	
+        	
+		break;
+		
+		case 9://RELATORIO DO ESTOQUE
+        	consulta_financeira(&total_produtos, codigos, nome_produto, precos, estoques);
+        break;	
+	 
+	 
+	 
+	 
+	 }
+    
+    }
+    while(menu!=0);
+    
+    
+    
+    
+ return 0;   
+}

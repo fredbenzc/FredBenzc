@@ -1,26 +1,80 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include <cstdlib>     // Necessário para usar a função system() PING SERVIDOR
-#include <windows.h> // Necessário para usar a função Sleep()
+#include<string.h>
+#include<cstdlib>     // Necessário para usar a função system() PING SERVIDOR
+#include<windows.h> // Necessário para usar a função Sleep()
+#include <time.h> // Biblioteca obrigatória para manipulação de tempo
 
-
+#define IP "192.168.0.101"
 #define IP_SERVIDOR "192.168.0.101"
+
+#define HISTORY 999
 #define MAX 9998 //Quantidade do estoque
 #define USUARIOS 5
 #define PERMISSAO 10
+			
+
+//=================================================================================== data e hora =======================================================================================================================
+void data_hora(char data[20], char hora[20]) 
+{
+    FILE *stream;
+
+    // 1. Pegando a DATA do sistema
+    stream = popen("echo %date%", "r");
+    if (stream != NULL) {
+        if (fgets(data, 20, stream) != NULL) {
+            for(int i = 0; i < 20; i++) {
+                if(data[i] == '\n' || data[i] == '\r') {
+                    data[i] = '\0';
+                    break;
+                }
+            }
+        }
+        pclose(stream); 
+    }
+
+    // 2. Pegando a HORA do sistema
+    stream = popen("echo %time%", "r");
+    if (stream != NULL) {
+        if (fgets(hora, 20, stream) != NULL) {
+            // Remove a quebra de linha inicial para evitar bugs
+            for(int i = 0; i < 20; i++) {
+                if(hora[i] == '\n' || hora[i] == '\r') {
+                    hora[i] = '\0';
+                    break;
+                }
+            }
+            //  Corta a string após os minutos (mantém apenas HH:MM)
+            // Se a hora começar com espaço (ex: " 9:57"), removemos o espaço primeiro
+            if (hora[0] == ' ') {
+                hora[5] = '\0'; // Corta em " 9:57" horas[8] 9:57:22
+            } else {
+                hora[5] = '\0'; // Corta em "21:57" horas[8] 21:57:22
+            }
+        }
+        pclose(stream); 
+    }
+
+    // 3. Exibindo as variáveis salvas no seu programa
+   // printf("\n\t[SUCESSO] Dados capturados do sistema!\n");
+   // printf("\tData guardada na variavel: %s\n", data);
+    //printf("\tHora guardada na variavel: %s\n\n", hora);
+}
+ 
+
 //================================================================================================================================================================================
 void manutencao()
 {
     system("cls");
      
     printf ("") ;
-    printf ("\n\t\033[1;32m=====================================================\033[1;32m\n") ;
-    printf( "\t\t         \033[1;33mAVISO DO SISTEMA\033[0m                     \n");
-    printf ("\t\033[1;32m=====================================================\033[1;32m\n") ;
-    printf (" \n\t\t [!] PAGINA EM MANUTENCAO [!]\n\n ") ;
-    printf ("\t\tEstamos trabalhando para melhorar. \n") ;
-    printf (" \t\tPor favor, tente novamente mais tarde.\n\n") ;
-    printf ("\t\033[1;32m=====================================================\033[1;32m\n") ;
+    printf ("\n\t\t\t\033[1;32m=====================================================\033[1;32m\n") ;
+    printf( "\t\t\t\t         \033[1;33mAVISO DO SISTEMA\033[0m                     \n");
+    printf ("\t\t\t\033[1;32m=====================================================\033[1;32m\n") ;
+    printf (" \n\t\t\t\t [!] PAGINA EM MANUTENCAO [!]\n\n ") ;
+    printf ("\t\t\t\tEstamos trabalhando para melhorar. \n") ;
+    printf (" \t\t\t\tPor favor, tente novamente mais tarde.\n\n") ;
+    printf ("\t\t\t\033[1;32m=====================================================\033[1;32m\n") ;
     Sleep(2000);
 }
 //======================================================================= ping ===================================================================================================
@@ -48,6 +102,87 @@ void ping()
     }
     
 }
+
+
+//===================================================================== CARREGAR (DADOS BANCARIOS  ARQUIVO .TXT)===============================================================================================
+void carregar_cofre(float *cofre, float *saldo_caixa, int *qt_deposito,int conta[HISTORY], int agencia[HISTORY], float historico_valor_deposito[HISTORY], char data_deposito[HISTORY][20], char hora_deposito[HISTORY][20], char historico_user_login[HISTORY][30])
+{
+	//FILE *arquivo_leitura = fopen("dados.txt", "w");
+    FILE *arquivo_leitura = fopen("\\\\192.168.0.101\\dados\\depositos.txt", "r");
+    
+    if (arquivo_leitura != NULL) 
+    {
+        
+        fscanf(arquivo_leitura, "%f\n", saldo_caixa); 
+        fscanf(arquivo_leitura, "%f\n", cofre);
+        fscanf(arquivo_leitura, "%d\n", qt_deposito); 
+        
+       
+        for (int i = 1; i < *qt_deposito; i++) 
+        {
+           
+            fscanf(arquivo_leitura, "%f %s %s %d %d %s\n", 
+                    &historico_valor_deposito[i], 
+                    data_deposito[i], 
+                    hora_deposito[i],
+                    &conta[i],
+                    &agencia[i], 
+                    historico_user_login[i]);
+        }
+        
+        fclose(arquivo_leitura);
+        printf("\n\n\t\t\033[1;32m    [SUCESSO] Dados do cofre carregados com sucesso!\n");
+        Sleep(2500);
+    } 
+    else // Se o arquivo não existir (primeira execução), inicia as variáveis zeradas
+    {
+        *saldo_caixa = 0.0;
+        *cofre = 0.0;
+        *qt_deposito = 1;
+        printf("\n\n\t\t\033[1;34m    [AVISO] Arquivo nao encontrado. Inicializando saldos zerados.\n");
+        Sleep(2500);
+    }
+}
+//====================================================================== SALVAR (DADOS BANCARIOS  ARQUIVO .TXT)==================================================================================================
+void salvar_cofre(float *cofre, float *saldo_caixa, int *qt_deposito,int conta[HISTORY], int agencia[HISTORY], float historico_valor_deposito[HISTORY], char data_deposito[HISTORY][20], char hora_deposito[HISTORY][20], char historico_user_login[HISTORY][30])
+{
+    
+    //FILE *arquivo_escrita = fopen("depositos.txt", "r");
+	FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\depositos.txt", "w");
+    
+    if (arquivo_escrita != NULL) 
+    {
+       
+        fprintf(arquivo_escrita, "%f\n", *saldo_caixa);
+        fprintf(arquivo_escrita, "%f\n", *cofre);
+        fprintf(arquivo_escrita, "%d\n", *qt_deposito); 
+        
+        
+        for (int i = 1; i < *qt_deposito; i++) 
+        {
+            
+            fprintf(arquivo_escrita, "%.2f %s %s %d %d %s\n", 
+                    historico_valor_deposito[i], 
+                    data_deposito[i], 
+                    hora_deposito[i],
+					conta[i],
+					agencia[i], 
+                    historico_user_login[i]);
+        }
+        
+        fclose(arquivo_escrita);
+        printf("\a"); 
+        printf("\n\n\t\t\033[1;32m    [SUCESSO] Dados salvos no servidor com sucesso!\n");
+        Sleep(2500);
+    } 
+    else
+    {
+        printf("\n\n\t\t\033[1;34m    [ERRO] Sem permissao de escrita ou servidor offline!\n\n\n\n\n\n\n");
+        Sleep(2500);
+    }
+}
+
+
 //====================================================================== CARREGAR (PRODUTOS DO ARQUIVO .TXT====================================================================================================
 void carregar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre)
 {
@@ -55,14 +190,12 @@ void carregar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], 
     int largura_barra = 45,blocos_preenchidos;
 	
 	
-	FILE *arquivo_leitura = fopen("dados.txt", "r");//CARREGAR O ARQUIVO DO PC LOCAL
-	//FILE *arquivo_leitura = fopen("\\\\192.168.0.101\\dados\\dados.txt", "r");//CARREGAR O ARQUIVO NA REDE
+	//FILE *arquivo_leitura = fopen("dados.txt", "r");//CARREGAR O ARQUIVO DO PC LOCAL
+	FILE *arquivo_leitura = fopen("\\\\192.168.0.101\\dados\\dados.txt", "r");
     
     if (arquivo_leitura != NULL) 
     {
-        if (fscanf(arquivo_leitura, "%f\n", saldo_caixa) != EOF && 
-            fscanf(arquivo_leitura, "%f\n", cofre) != EOF &&
-            fscanf(arquivo_leitura, "%d\n", total_produtos) != EOF) 
+        if (fscanf(arquivo_leitura, "%d\n", total_produtos) != EOF) 
             
         {
             for (int i = 1; i < *total_produtos; i++) 
@@ -118,9 +251,10 @@ void carregar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], 
 	else
 	{
         printf("\n\t\t[AVISO] Nao foi possivel conectar ao servidor ou o arquivo nao existe.\n");
-        system("pause > nul");
+        Sleep(2000);
     }
 }
+
 //============================================================== SALVAR (PRODUTOS NO ARQUIVO .TXT ===================================================================================================
 void salvar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre)
 {
@@ -128,12 +262,12 @@ void salvar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], fl
    int largura_barra = 45,blocos_preenchidos;
     printf("\n\t\t\tSalvando informacoes no servidor...\n");
     
-    FILE *arquivo_escrita = fopen("dados.txt", "w");//SALVA O ARQUIVO NO PC LOCAL
-    //FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\dados.txt", "w");//SALVA O ARQUIVO NA REDE
+    //FILE *arquivo_escrita = fopen("dados.txt", "w");//SALVA O ARQUIVO NO PC LOCAL
+    FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\dados.txt", "w");
+    
     if (arquivo_escrita != NULL) 
     {
-        fprintf(arquivo_escrita, "%f\n", *saldo_caixa);
-		fprintf(arquivo_escrita, "%f\n", *cofre);
+        
 		fprintf(arquivo_escrita, "%d\n", *total_produtos); 
         
         for (int i = 1; i < *total_produtos; i++) 
@@ -191,20 +325,19 @@ void salvar(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], fl
 	else
 	{
         printf("\n\t\t[AVISO] Nao foi possivel conectar ao servidor ou o arquivo nao existe.\n");
-        system("pause > nul");
+        Sleep(2000);
     }
 }
 //======================================================================= SALVAR RAPIDO (PRODUTOS NO ARQUIVO .TXT ===================================================================================================
 void salvar_rapido(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre)
 {
           
-	FILE *arquivo_escrita = fopen("dados.txt", "w");//SALVA O ARQUIVO NO PC LOCAL
-    //FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\dados.txt", "w");//SALVA O ARQUIVO NA REDE
+	//FILE *arquivo_escrita = fopen("dados.txt", "w");//SALVA O ARQUIVO NO PC LOCAL
+    FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\dados.txt", "w");
     
     if (arquivo_escrita != NULL) 
     {
-        fprintf(arquivo_escrita, "%f\n", *saldo_caixa);
-		fprintf(arquivo_escrita, "%f\n", *cofre);
+        
 		fprintf(arquivo_escrita, "%d\n", *total_produtos); 
         
         for (int i = 1; i < *total_produtos; i++) 
@@ -219,27 +352,24 @@ void salvar_rapido(int *total_produtos, int codigo[MAX], char nome_produto[MAX][
     else
     {
         printf("\n\t\t[ERRO] Sem permissao de escrita ou servidor offline!\n\n\n\n\n\n\n");
-        system("pause > nul");
+        Sleep(2000);
     }
 }
+
 //============================================================== CARREGAR USUARIOS DO ARQUIVO .TXT ===================================================================================
 void carregar_user(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUARIOS], int permissao[USUARIOS][PERMISSAO]) 
 { 	 	 
+    // FILE *arquivo_leitura = fopen("LOGIN.txt", "r");
+    FILE *arquivo_leitura = fopen("\\\\192.168.0.101\\dados\\LOGIN.txt", "r");
     
-	FILE *arquivo_leitura = fopen("LOGIN.txt", "r");//CARREGAR O ARQUIVO DE LOGIN DOS USUARIOS DO PC LOCAL
-    //FILE *arquivo_leitura = fopen("\\\\192.168.0.101\\dados\\LOGIN.txt", "r");//CARREGAR O ARQUIVO DOS USUARIOS NA REDE
-	if (arquivo_leitura != NULL) 
+    if (arquivo_leitura != NULL) 
     {
-       
         if (fscanf(arquivo_leitura, "%d", cont) != EOF) 
         {
-            if (*cont > 10) *cont = 10;
-
             for (int i = 0; i < *cont; i++) 
             {
                 fscanf(arquivo_leitura, "%d %29s %d", &ID[i], user[i], &senha[i]);
-                
-               
+            
                 for (int j = 0; j < PERMISSAO; j++)
                 {
                     fscanf(arquivo_leitura, "%d", &permissao[i][j]);
@@ -250,27 +380,41 @@ void carregar_user(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int 
     }
     else
     {
+        // IMPLEMENTAÇÃO: Se o arquivo não existe, cria o usuário 'root' 
         printf("\n\n\t\t\033[1;32m[INFO]     Criando novo banco de dados LOGIN.txt...\n");
         printf("\t\t\033[1;32m[INFO]     User ... :\033[1;34m root    \033[1;32m Senha ... :\033[1;34m 3585 \033[0m \n\n");
+        
+        ID[0] = 1000;                  // ID do root
+        strcpy(user[0], "root");    // Nome do root 
+        senha[0] = 3585;            // Senha do root
+        
+       
+        for (int j = 0; j < PERMISSAO; j++) // Atribui todas as permissões como ativas (1) para o administrador root
+        {
+            permissao[0][j] = 1;
+        }
+        
+        *cont = 1; //sistema sabe que existe 1 usuário cadastrado (o root)
+        
         system("pause > nul");
-		//Sleep(2000);
     }
 }
+
 //============================================================== SALVAR USUARIOS NO ARQUIVO .TXT ==========================================================================================
 void salvar_user(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUARIOS], int permissao[USUARIOS][PERMISSAO]) 
 {
+    // FILE *arquivo_escrita = fopen("LOGIN.txt", "w");
+    FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\LOGIN.txt", "w");
     
-	FILE *arquivo_escrita = fopen("LOGIN.txt", "w"); // SALVA O ARQUIVO DOS USUARIOS NO PC LOCAL
-    //FILE *arquivo_escrita = fopen("\\\\192.168.0.101\\dados\\LOGIN.txt", "w"); //SALVA O ARQUIVO DOS USUARIOS NA REDE 
-    
-	if (arquivo_escrita != NULL) 
+    if (arquivo_escrita != NULL) 
     {
+        
         fprintf(arquivo_escrita, "%d\n", *cont); 
+        
         
         for (int i = 0; i < *cont; i++) 
         {
             fprintf(arquivo_escrita, "%d %s %d ", ID[i], user[i], senha[i]);
-            
             
             for (int j = 0; j < PERMISSAO; j++)
             {
@@ -280,16 +424,16 @@ void salvar_user(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID
         }
         
         fclose(arquivo_escrita);
-        printf("\a");
+        printf("\a"); // Emite o sinal sonoro de sucesso
     } 
     else
     {
         printf("\n\t\t[ERRO] Sem permissao de escrita ou servidor offline!\n\n\n\n\n\n\n");
-        system("pause > nul");
+        Sleep(2000);
     }
 }
 //================================================================= TELA DE LOGIN ======================================================================================
-void login(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUARIOS], int permissao[USUARIOS][PERMISSAO],char user_login[30], int *ID_login )
+void login(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUARIOS], int permissao[USUARIOS][PERMISSAO], char user_login[30], int *ID_login)
 { 
     
     char usuario_digitado[30]; 
@@ -312,22 +456,6 @@ void login(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUAR
          
     
     printf("\n\t\033[1;34m--------------------------------------------------\033[0m\n"); 
-
-    if((*cont )== 0) //primeiro login - criar o arquivo e o (usario root e senha 3585)
-    {
-    	
-		ID[0] = 1000; 
-		strcpy(user[0], "root");
-        senha[0] = 3585;
-          
-    	for(int j = 0; j < PERMISSAO; j++) 
-		{
-            permissao[0][j] = 1;
-        }
-    	
-			 *cont = 1; 
-        	 salvar_user(cont, user, senha, ID, permissao);	
-   	} 
    
       
 	for(int i = 0; i < *cont; i++) 
@@ -380,7 +508,7 @@ void cadastro(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], 
         system("cls");
         printf("\n\033[1;31m  ===================================\033[0m\033[1;34m CADASTRAR PRODUTOS \033[0m\033[1;31m==============================\033[0m\n");
         
-        printf("\n\n\t \033[1;32mCODIGO GERADO ........... : \033[1;44m # %03d \033[0m   \n", *total_produtos);
+        printf("\n\n\t \033[1;32mCODIGO GERADO ........... : \033[1;44m # %d \033[0m   \n", *total_produtos);
        
         printf("\033[1;32m   \n");
         
@@ -416,7 +544,11 @@ void cadastro(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], 
 		}
 
     } while (menu == 1);
+
+	
 }
+
+
 //============================================================== CASE 2: VENDAS =========================================================================================================
 void venda(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa)
 {
@@ -543,7 +675,10 @@ void venda(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], flo
     *saldo_caixa += total_acumulado; 
     
 }
+
+
 //============================================================== CASE 3: COMPRAR =========================================================================================================
+
 void compra(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX])
 {
 	system("cls");
@@ -590,7 +725,7 @@ void compra(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], fl
         
     
     
-	if(achou == 0) 
+	if(achou == 0) // Se o loop terminou e a variável 'achou' continuar em 0, significa que rodou tudo e não existia
     {
         printf("\n\n\n\n\n\n");
 		printf("\033[1;31m              ================================================================================\033[0m\n");
@@ -599,6 +734,9 @@ void compra(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], fl
         Sleep(2000); 
     }  
 }
+
+
+
 //============================================================== CASE 4: CAIXA ===============================================================================================================
 void caixa(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX], float *saldo_caixa, float *cofre )
 {
@@ -639,25 +777,187 @@ void caixa(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], flo
         }
     }
 }
-//============================================================== CASE 5: COFRE ===============================================================================================================
-void cofre_caixa(const float *cofre)
-{
-    system("cls");
-	
-	
-   	printf("\n\n");
-    printf("\n\t\033[1;32m=====================================================\033[0m\n");
-    printf("\t\t\t   \033[1;34mSALDO DO COFRE                    \n");
-    printf("\t\033[1;32m=====================================================\033[0m\n\n");
-    printf("\t\tVALOR TOTAL RETIDO: \033[1;32mR$ %.2f\033[0m REAIS\n\n", *cofre);
-    printf("\t\033[1;32m=====================================================\033[0m\n\t");
-    printf("\t\033[1;33mPressione ENTER para voltar ao menu...\033[0m");
-       	
-	   	
 
-    system("pause > nul"); 
+
+//============================================================== CASE 5: COFRE ===============================================================================================================
+void cofre_caixa(float *cofre, float *saldo_caixa, char user_login[30], char data[20], char hora[20], int *qt_deposito,int conta[HISTORY], int agencia[HISTORY], float historico_valor_deposito[HISTORY],char data_deposito[HISTORY][20], char hora_deposito[HISTORY][20], char historico_user_login[HISTORY][30])
+{
+    
+    int menu;
+	float valor_deposito;
+	
+
+	system("cls");
+	do 
+	{         
+        system("cls");         
+        printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
+        printf("\t\033[1;34m °°\033[1;32m   [1]\033[0m - NOVO DEPOSITO\033[1;32m  [2]\033[0m - HISTORICO BANCARIO\033[1;32m  [3]\033[0m - SALDO DO COFRE \033[1;32m  [0]\033[0m - SAIR  \033[1;34m  °° \n");         
+        printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");    
+       	printf("\t\033[1;32m   >  " );
+    	scanf("%d", &menu);
+        switch(menu)
+    	{
+        	
+        	case 1:
+        	system("cls");         
+             //deposito_bancario(saldo_caixa, cofre);
+           	printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
+        	printf("\t\033[1;34m °°\033[1;32m   [1] - \033[0m\033[1;42mNOVO DEPOSITO\033[0m  [2]\033[0m - HISTORICO BANCARIO\033[0m  [3]\033[0m - SALDO DO COFRE \033[0m  [0]\033[0m - SAIR  \033[1;34m  °° \n");         
+        	printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");   
+			printf("\n\033[1;31m ================================================================================\033[0m\n");
+    		printf("\033[1;31m                              \033[0m\033[1;34m DEPOSITO / MOVIMENTACAO FINANCEIRA \033[0m                      \033[1;31m\033[0m\n");
+    		printf("\033[1;31m ================================================================================\033[0m\n");
+    		printf("\t\033[1;33m  SALDO ATUAL DO CAIXA : \033[1;32mR$ %.2f \033[0m\n", *saldo_caixa);
+    		printf("\t\033[1;33m  SALDO ATUAL DO COFRE : \033[1;32mR$ %.2f \033[0m\n", *cofre);
+    		printf("\033[1;31m ================================================================================\033[0m\n\n");
+
+    		printf("\t[1] - DEPOSITAR DO CAIXA PARA O COFRE\n");
+    		printf("\t[2] - DEPOSITAR DO COFRE PARA O BANCO\n");
+    		printf("\t[0] - VOLTAR AO MENU PRINCIPAL\n");
+    				
+			printf("\t \033[1;32m  >  " );
+    		scanf("%d", &menu);
+
+    		switch(menu)
+    		{
+        		case 1:
+            		system("cls");
+            		printf("\n\t\033[1;34m[MOVIMENTACAO] TRANSFERIR DO CAIXA PARA O COFRE\033[0m\n\n");
+            		printf("\tQuanto deseja transferir? (Saldo Maximo: R$ %.2f) -> R$ ", *saldo_caixa);
+            		scanf("%f", &valor_deposito);
+					
+            
+            		if	((valor_deposito > 0 ) && (valor_deposito <= *saldo_caixa))
+            		{
+                		*saldo_caixa -= valor_deposito; 
+   						*cofre += valor_deposito;      
+						               			
+						
+						system("cls");
+                		printf("\n\n\n\n\n\n");
+                		printf("\033[1;31m      ================================================================================\033[0m\n");
+                		printf("  \033[1;32m                      [SUCESSO] Transferencia realizada com sucesso!\033[0m\n");
+                		printf("  \033[1;34m                      Novo Saldo do Cofre: R$ %.2f\033[0m\n", *cofre);
+                		printf("\033[1;31m      ================================================================================\033[0m\n\n");
+            			
+					}	
+            		else
+           			{
+                		printf("\n\t\033[1;31m[ERRO] Saldo insuficiente no caixa ou valor inválido!\033[0m\n");
+            		}
+            	Sleep(2500);
+            	break;
+
+        		case 2: // Submenu: Depósito Externo (Cofre para o Banco)
+    system("cls");
+    printf("\n\t\033[1;34m[DEPOSITO] COFRE PARA O BANCO : SALDO : %.2f\033[0m\n\n", *cofre);
+    printf("\tDigite o valor do deposito externo -> R$ ");
+    scanf("%f", &valor_deposito);
+
+    if ((valor_deposito > 0) && (valor_deposito <= *cofre))
+    {
+        system("cls");
+
+        printf("\n\t VALOR DO DEPOSITO ... : R$ %.2f", valor_deposito);
+        printf("\n\t NUMERO DA CONTA ..... : ");
+        scanf("%d", &conta[*qt_deposito]); 
+        printf("\t NUMERO DA AGENCIA ... : ");
+        scanf("%d", &agencia[*qt_deposito]); 
+        
+        data_hora(data, hora);
+        
+		historico_valor_deposito[*qt_deposito] = valor_deposito;
+        *cofre -= valor_deposito;
+        strcpy(historico_user_login[*qt_deposito], user_login);
+        strcpy(data_deposito[*qt_deposito], data);
+        strcpy(hora_deposito[*qt_deposito], hora);
+        
+        
+        (*qt_deposito)++; 
+
+        printf("\n\n\n\n\n\n");
+        printf("\033[1;31m      ================================================================================\033[0m\n");
+        printf("  \033[1;32m                      [SUCESSO] Deposito externo computado com sucesso!\033[0m\n");
+        printf("  \033[1;34m                      Novo Saldo do Cofre: R$ %.2f\033[0m\n", *cofre);
+        printf("\033[1;31m      ================================================================================\033[0m\n\n");
+        	salvar_cofre(cofre, saldo_caixa, qt_deposito,conta, agencia, historico_valor_deposito, data_deposito, hora_deposito, historico_user_login);
+	
+        break;
+    }
+    else
+    {
+        printf("\n\t\033[1;31m[ERRO] Valor de deposito inválido!\033[0m\n");
+    }
+    Sleep(2500);
+    break;
+
+case 0:
+    return; // Retorna ao menu anterior imediatamente
+    break;
+
+default:
+    printf("\n\t\033[1;31m[AVISO] Opcao invalida!\033[0m\n");
+    Sleep(2500);
+    break;
+} // Final do segundo switch deposito
+break; // Final correto do case 1 do switch principal
+
+case 2: // Menu Principal: Histórico de Depósitos
+    system("cls");         
+    
+    printf("\033[1;31m  ===============================================================================================================\n");
+    printf(" \033[1;34m                                             HISTORICO DE DEPOSITOS                                           \n");
+    printf("\033[1;31m  ===============================================================================================================\n");
+    printf("\033[1;32m  %-5s %-12s %-10s %-15s %-10s %-15s %-20s\n", "QT", "DATA", "HORAS", "N. CONTA", "AGENCIA", "VALOR DEPOSITO", "USUARIO");     
+    printf("\033[1;33m  ---------------------------------------------------------------------------------------------------------------\n"); 
+
+    
+    for(int i = 1; i < *qt_deposito; i++)     
+    {
+        printf("\033[0m  %-5d %-12s %-10s %-15d %-10d R$ %-12.2f %-20s\n",
+               i ,                      
+               data_deposito[i],                
+               hora_deposito[i],                   
+               conta[i],                   
+               agencia[i],                 
+               historico_valor_deposito[i],
+               historico_user_login[i]);   
+   
+        printf("\033[1;33m  ---------------------------------------------------------------------------------------------------------------\n");
+    }
+
+    printf("\033[1;31m  ===============================================================================================================\n\033[0m"); 
+    printf("\n\t\033[1;33m  Pressione ENTER para voltar ao menu...\033[0m");
+    system("pause > nul");
+    break;
+
+	case 3:
+        	system("cls");         
+        	printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
+        	printf("\t\033[1;34m °°\033[0m   [1]\033[0m - NOVO DEPOSITO\033[0m  [2]\033[0m - HISTORICO BANCARIO\033[1;32m  [3] - \033[0m\033[1;42mSALDO DO COFRE\033[0m   [0]\033[0m - SAIR  \033[1;34m  °° \n");         
+        	printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n"); 
+			printf("\n");
+    		printf("\n\t\t\t\033[1;32m=====================================================\033[0m\n");
+    		printf("\t\t\t\t\t   \033[1;34mSALDO DO COFRE                    \n");
+    		printf("\t\t\t\033[1;32m=====================================================\033[0m\n\n");
+    		printf("\t\t\t\tVALOR TOTAL RETIDO: \033[1;32mR$ %.2f\033[0m REAIS\n\n", *cofre);
+    		printf("\t\t\t\033[1;32m=====================================================\033[0m\n\t");
+    		printf("\t\t\t\033[1;33mPressione ENTER para voltar ao menu...\033[0m");
+      
+    		system("pause > nul"); 
+			
+				
+   	break;	
+		
+		}//final do swtch 1 principal
+      
+     }
+	 while(menu !=0);   
+
    
 }
+
 //=============================================================== CASE 6: ESTOQUE =========================================================================================================
 void consulta(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX]) 
 {
@@ -688,6 +988,10 @@ void consulta(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], 
    	printf("\t\033[1;33m            Pressione ENTER para voltar ao menu...\033[0m");
     system("pause > nul");
 }
+
+
+
+
 //=========================================================== CASE 7: PESQUISAR ===============================================================================================================
 void pesquisa(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX])
 {
@@ -734,6 +1038,8 @@ void pesquisa(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], 
         scanf("%d", &pesquisa); 
     }
 }
+
+
 //=========================================================== CASE 8: REUTILIZAR CODIGO ZERADO ===============================================================================================================
 void codigo_zerado(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX])
 {
@@ -809,7 +1115,7 @@ void codigo_zerado(int *total_produtos, int codigo[MAX], char nome_produto[MAX][
             if((codigo[i] == novo_codigo) && (qt_estoque[i] == 0) && (novo_codigo > 0))
             {
                 indice_encontrado = i;
-                break; // Encontrou, pode parar o laço imediatamente
+                break; 
             }
         }
         
@@ -849,6 +1155,10 @@ void codigo_zerado(int *total_produtos, int codigo[MAX], char nome_produto[MAX][
         }
     }
 }
+
+
+
+
 //========================================================== CASE 9: CONSULTA FINANCEIRA ===============================================================================================================
 void consulta_financeira(int *total_produtos, int codigo[MAX], char nome_produto[MAX][30], float preco[MAX], int qt_estoque[MAX]) 
 {
@@ -869,15 +1179,21 @@ void consulta_financeira(int *total_produtos, int codigo[MAX], char nome_produto
         printf("\033[1;33m    ------------------------------------------------------------------------------------------\033[0m\n");
     }    
         printf("\n");
-        printf("\t           VALOR TOTAL DO ESTOQUE ACUMULADO NO SISTEMA: \033[1;32mR$ %.2f\033[0m  \n\n", valor_total_estoque);
+        
+		printf("\t           VALOR TOTAL DO ESTOQUE ACUMULADO NO SISTEMA: \033[1;32mR$ %.2f\033[0m  \n\n", valor_total_estoque);
         printf("\033[1;31m===============================================================================================================\033[0m\n"); 
         printf("\t\033[1;33m                  Pressione ENTER para voltar ao menu...\033[0m");
         system("pause > nul");
 }
+
+
+
+
 //================================================================ CASE10 : USER ==============================================================================================
-void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUARIOS], int permissao[USUARIOS][PERMISSAO]) 
+void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], int ID[USUARIOS], int permissao[USUARIOS][PERMISSAO], char *user_login ) 
 {     
-    int menu, id, senha1 = 0, senha2 = 1, primeira_tentativa = 1, usuario_encontrado = 0, confirmar_salvar = 0, permissao_2[PERMISSAO]; 
+  
+	int menu, id, senha1 = 0, senha2 = 1, primeira_tentativa = 1, usuario_encontrado = 0, confirmar_salvar = 0, permissao_2[PERMISSAO], indice_alvo; 
     char user_novo[30];
                 
 	do 
@@ -891,143 +1207,142 @@ void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], 
         
         switch(menu) 
         {
-           
-		   
-		    case 1:                                  
-                if (*cont >= USUARIOS + 1) 
-                {                     
-                    system("cls");
-					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
-        			printf("\t\033[1;34m °°\033[1;32m  [1] - \033[0m\033[1;42m NOVO USUARIO \033[0m  [2]\033[0m - EDITAR USUARIO\033[0m  [3]\033[0m - TODOS USUARIOS \033[0m  [0]\033[0m - SAIR  \033[1;34m °° \n");         
-        			printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");   
-					printf("\n\t [AVISO] Limite maximo de %d usuarios atingido!\n",USUARIOS);                     
-                    Sleep(2000);                   
-                    break;                 
-                }                  
-                                 
-                system("cls");         
+    
+			case 1: // CADASTRAR NOVO USUARIO
+          
+			if (*cont >= USUARIOS+1) 
+    		{                     
+        		system("cls");
         		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
-        		printf("\t\033[1;34m °°\033[1;32m   [1]\033[1;36m - NOVO USUARIO\033[0m  [2]\033[0m - EDITAR USUARIO\033[0m  [3]\033[0m - TODOS USUARIOS \033[0m  [0]\033[0m - SAIR  \033[1;34m  °° \n");         
+        		printf("\t\033[1;34m °°\033[1;32m  [1] - \033[0m\033[1;42m NOVO USUARIO \033[0m  [2]\033[0m - EDITAR USUARIO\033[0m  [3]\033[0m - TODOS USUARIOS \033[0m  [0]\033[0m - SAIR  \033[1;34m °° \n");         
         		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");   
-                printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", *cont);                   				
-                printf("\n\t\033[1;34m NOVO USUARIO ... :\033[1;32m ");                 
-                scanf("%29s", user[*cont]);                         			    
-                
-				do
-   			    {
+        		printf("\n\t \033[1;31m[AVISO] Limite maximo de %d usuarios atingido!\033[0m\n", USUARIOS);                     
+        		Sleep(2000);                   
+        		break; // Sai do case e volta para o menu                
+    		}                  
+    		else
+    		{
+        		system("cls");
+        		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
+        		printf("\t\033[1;34m °°\033[1;32m  [1] - \033[0m\033[1;42m NOVO USUARIO \033[0m  [2]\033[0m - EDITAR USUARIO\033[0m  [3]\033[0m - TODOS USUARIOS \033[0m  [0]\033[0m - SAIR  \033[1;34m °° \n");         
+        		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");   
+             	printf("\n\t\033[1;34m ID GERADO ...... :\033[0m [\033[1;32m # %d \033[0m]", *cont);                   				
+        		printf("\n\t\033[1;34m NOVO USUARIO ... :\033[1;32m ");                 
+        		scanf("%29s", user[*cont]);                 
+        
+        		do
+        		{
+            		primeira_tentativa = 1;
+           	 		printf("\t\033[1;34m SENHA ............ : \033[0m");                 
+            		printf("\033[30m"); // Oculta o texto digitado na tela
+            		scanf("%d", &senha1);     			
+            		printf("\033[0m");  
 
-                    primeira_tentativa = 1;
-					
-					printf("\t\033[1;34m SENHA ............ : \033[0m");                 
-                    printf("\033[30m"); // Oculta a digitação
-                    scanf("%d", &senha1);     			
-                    printf("\033[0m");  
-
-                    printf("\t\033[1;34m REPITA A SENHA ... : \033[0m");                 
-                    printf("\033[30m"); // Oculta a digitação
-                    scanf("%d", &senha2);     			
-                    printf("\033[0m");          
-
-                   
-                    if (senha1 != senha2)  // Se errou, desmarca a primeira tentativa para que a próxima volta exiba o erro
-                    {
-                        primeira_tentativa = 0;
-                    }
-                    
-                    
-         			if (!primeira_tentativa)
-                    {	
-                        printf("\n\t\033[1;31m[ERRO]\033[1;33m As senhas nao coincidem! Tente novamente.\033[0m\n\n");
-                    }
-
-                } 
+            		printf("\t\033[1;34m REPITA A SENHA ... : \033[0m");                 
+            		printf("\033[30m"); // Oculta o texto digitado na tela
+            		scanf("%d", &senha2);     			
+            		printf("\033[0m");          
+          
+            		if (senha1 != senha2)  
+            		{		
+                		primeira_tentativa = 0;
+                		printf("\n\t\033[1;31m[ERRO]\033[1;33m As senhas nao coincidem! Tente novamente.\033[0m\n\n");
+           			}
+                        
+        		} 
 				while(senha1 != senha2);
-						
-				
-				senha[*cont] = senha1;  
-    
-				printf("\n\t\033[1;32m[SUCESSO] Senha confirmada e salva!\033[0m\n");
-    
-			
+        
+        		senha[*cont] = senha1;  
+        		printf("\n\t\033[1;32m[SUCESSO] Senha confirmada e salva!\033[0m\n");
                     
-                printf("\n\t\033[1;33m            PERMISSOES: \033[0m\n\n");     			
-                printf("\t\033[1;34m Cadastrar? ........ NAO [0]  SIM [1] > \033[1;32m ");    				
-                scanf("%d", &permissao[*cont][0]);          				
-                printf("\t\033[1;34m Venda? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][1]);           			
-                printf("\t\033[1;34m Comprar? .......... NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][2]);  				 				
-                printf("\t\033[1;34m caixa? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][3]);      			     			
-                printf("\t\033[1;34m cofre? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][4]);      			     			
-                printf("\t\033[1;34m estoque? .........  NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][5]);      			     			
-                printf("\t\033[1;34m pesquisar? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][6]);  				 				
-                printf("\t\033[1;34m editar produto? ... NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][7]);      			     			
-                printf("\t\033[1;34m relatorio? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][8]);    			 				
-                printf("\t\033[1;34m ususario? ......... NAO [0]  SIM [1] > \033[1;32m ");     			
-                scanf("%d", &permissao[*cont][9]);    			 
-                               
-                printf("\n\t\033[1;32m[SUCESSO] Usuario criado....!\033[0m\n");
-                Sleep(1000);
+       			printf("\n\t\033[1;33m            PERMISSOES: \033[0m\n\n");     			
+        		printf("\t\033[1;34m Cadastrar? ........ NAO [0]  SIM [1] > \033[1;32m ");    				
+        		scanf("%d", &permissao[*cont][0]);          				
+      			printf("\t\033[1;34m Venda? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][1]);           			
+        		printf("\t\033[1;34m Comprar? .......... NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][2]);  				 				
+        		printf("\t\033[1;34m Caixa? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][3]);      			     			
+        		printf("\t\033[1;34m Cofre? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][4]);      			     			
+        		printf("\t\033[1;34m Estoque? .......... NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][5]);      			     			
+        		printf("\t\033[1;34m Pesquisar? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][6]);  				 				
+        		printf("\t\033[1;34m Editar Produto? ... NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][7]);      			     			
+        		printf("\t\033[1;34m Relatorio? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][8]);    			 				
+        		printf("\t\033[1;34m Usuario? .......... NAO [0]  SIM [1] > \033[1;32m ");     			
+        		scanf("%d", &permissao[*cont][9]);    			 
+                        
+        		ID[*cont] = *cont;                  
+                (*cont)++;      
+        		salvar_user(cont, user, senha, ID, permissao);
+        
+        		printf("\n\t\033[1;32m[SUCESSO] Usuario criado e salvo com sucesso no banco de dados!\033[0m\n");
+        		Sleep(2000);
+    		}
+			break;
+
                 
-				ID[*cont] = *cont;                  
-                (*cont)++;                  				 				 
-                                
-                 salvar_user(cont, user, senha, ID, permissao);
-                
-                break;       
-                
-                case 2://case 1 editar usuario
-            	do
+            case 2://case 1 editar usuario
+            do
+            {
+            	system("cls");         
+        		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");            
+        		printf("\t\033[1;34m °°\033[1;32m   [1]\033[0m - TROCAR SENHA\033[1;32m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3]\033[0m - EDITAR USUARIOS \033[1;32m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");        
+        		printf("\t\033[1;33m  >  ");         
+        		scanf("%d", &menu);          	
+            	
+				switch(menu)
             	{
-            		system("cls");         
-        			printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");            
-        			printf("\t\033[1;34m °°\033[1;32m   [1]\033[0m - TROCAR SENHA\033[1;32m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3]\033[0m - EDITAR USUARIOS \033[1;32m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        			printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");        
-        			printf("\t\033[1;33m  >  ");         
-        			scanf("%d", &menu);          	
-            		
-            		switch(menu)
-            		{
-            		
-						case 1: //case 1 (editar usuario) -> case 1 (trocar senha)
-            				system("cls");         
-        					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");           
-        					printf("\t\033[1;34m °°\033[1;32m   [1] - \033[0m\033[1;42m TROCAR SENHA \033[0m  [2]\033[0m - EDITAR PERMISSAO\033[0m  [3]\033[0m - EDITAR USUARIO \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");        
-							printf("\n\t\033[1;34m ID ................ :\033[1;32m ");                   				
-                			scanf("%d",&id);
+            		case 1: //case 1 (editar usuario) -> case 1 (trocar senha)
+            			system("cls");         
+        				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");           
+        				printf("\t\033[1;34m °°\033[1;32m   [1] - \033[0m\033[1;42m TROCAR SENHA \033[0m  [2]\033[0m - EDITAR PERMISSAO\033[0m  [3]\033[0m - EDITAR USUARIO \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");        
+						printf("\n\t\033[1;34m ID ................ :\033[1;32m ");                   				
+                		scanf("%d",&id);
 							
-							if (strcmp(user[id], "") == 0) //se a string (strcmp(user[id], "") == 0) estiver vazia nao vai entrar
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m nao pode ser editado\n");
-								Sleep(2000);
-								break;
-							}	
-							for(int i = 0; i< *cont; i++)
-							{
-																	
-								if(id == ID[i])
-								{
-									usuario_encontrado = 1;
-								}
+						for(int i = 0; i < *cont; i++)
+						{
+   							if(id == ID[i])
+    						{
+        						usuario_encontrado = 1;
+        						indice_alvo = i; // Guarda o ÍNDICE (a linha física da matriz)
+        						break;           // Encontrou! Para o laço imediatamente
+   								}
 							}
+
+						
+							
+							if ((usuario_encontrado == 1) || (id == 0 ))
+							{
+    							
+	  							if ((id == 1000) || (id == 0))
+   								{
+        							indice_alvo = 0;
+        							system("cls");         
+                					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");           
+        							printf("\t\033[1;34m °°\033[1;32m   [1] - \033[0m\033[1;42m TROCAR SENHA \033[0m  [2]\033[0m - EDITAR PERMISSAO\033[0m  [3]\033[0m - EDITAR USUARIO \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        							printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");           
+                					printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", indice_alvo);                   				
+                					printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s \n",user[indice_alvo]);
+    												
 								
-							if(usuario_encontrado == 1) 
-							{	
-											
-								system("cls");         
-                				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");          
-        						printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3] - \033[0m\033[1;42m EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        						printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");      
-                				printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", id);                   				
-                				printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s \n",user[id]);
-								do
+								}
+    							else
+    							{
+        							system("cls");         
+                					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");           
+        							printf("\t\033[1;34m °°\033[1;32m   [1] - \033[0m\033[1;42m TROCAR SENHA \033[0m  [2]\033[0m - EDITAR PERMISSAO\033[0m  [3]\033[0m - EDITAR USUARIO \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        							printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");           
+                					printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", indice_alvo);                   				
+                					printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s \n",user[indice_alvo]);
+									do
    			    					{	        
         								if (!primeira_tentativa)
         								{		
@@ -1048,285 +1363,281 @@ void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], 
 
     								}		 
 									while(senha1 != senha2); 
-																		    
-                				printf("\n\t\033[1;34m GOSTARIA SALVAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[0m\033[1;32m");
-                        		scanf("%d", &confirmar_salvar);	
+									
+									printf("\n\t\033[1;34m GOSTARIA SALVAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[0m\033[1;32m");
+                        			scanf("%d", &confirmar_salvar);	
 								
-								if((confirmar_salvar == 1) && (senha1 == senha2 ))
+									if((confirmar_salvar == 1) && (senha1 == senha2 ))
+									{
+									
+										senha[id] = senha1;
+										salvar_user(cont, user, senha, ID, permissao);	
+										printf("\n\t\033[1;32m[SUCESSO] Senha salva!\033[0m\n");
+									}
+									else
+                					{
+                						printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user[id]);
+									}
+							       						
+    							}
+							}
+							else
+							{
+    							printf("\n\t\033[1;33m[AVISO] Usuario nao existe no sistema.\033[0m\n");
+    						}
+																
+					Sleep(2000);
+					
+					break;	
+            			
+            		case 2://case 1 (editar usuario) -> case 2 (editar permissao)
+            			
+						system("cls");         
+        				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");             
+        				printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[1;32m  [2] - \033[0m\033[1;42m EDITAR PERMISSAO \033[0m  [3]\033[0m - EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");        
+						printf("\n\t\033[1;34m ID ................ :\033[1;32m ");                   				
+                		scanf("%d",&id);
+							
+						if ((id == 0) || (id == 1000)) 
+						{
+							printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m [\033[1;32m root \033[0m]\033[1;33m nao pode ser editado\n");
+							printf("\n\t\033[1;32mPressione ENTER para voltar ao menu...\033[0m");
+							system("pause>nul");	
+														
+						}
+						else
+						{
+							for(int i = 0; i< *cont; i++)
+							{
+								if(id == ID[i])
 								{
+									usuario_encontrado = 1;
+						       	}
+							}
 								
-									senha[id] = senha1;
+							if(usuario_encontrado == 1) 
+							{	
+								system("cls");
+								printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");             
+        						printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[1;32m  [2] - \033[0m\033[1;42m EDITAR PERMISSAO \033[0m  [3]\033[0m - EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        						printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");
+								printf("\n\t\033[1;34m ID ........ :\033[1;32m %d",id);
+								printf("\n\t\033[1;34m USUARIO ... :\033[1;32m %s \n", user[id]); 
+									
+								printf("\n\t\033[1;33m            PERMISSOES: \033[0m\n\n");     			
+                                printf("\t\033[1;34m Cadastrar? ........ NAO [0]  SIM [1] > \033[1;32m ");    				
+                                scanf("%d", &permissao_2[0]);          				
+                                printf("\t\033[1;34m Venda? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[1]);           			
+                                printf("\t\033[1;34m Comprar? .......... NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[2]);  				 				
+                                printf("\t\033[1;34m caixa? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[3]);      			     			
+                                printf("\t\033[1;34m cofre? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[4]);      			     			
+                                printf("\t\033[1;34m estoque? .........  NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[5]);      			     			
+                                printf("\t\033[1;34m pesquisar? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[6]);  				 				
+                                printf("\t\033[1;34m editar produto? ... NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[7]);      			     			
+                                printf("\t\033[1;34m relatorio? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[8]);    			 				
+                                printf("\t\033[1;34m ususario? ......... NAO [0]  SIM [1] > \033[1;32m ");     			
+                                scanf("%d", &permissao_2[9]);    			 
+                                          
+                                printf("\n\t\033[1;32m [SUCESSO] MODIFICACAO REALIZADA!\033[0m\n");
+                                printf("\n\t\033[1;34m GOSTARIA DE SALVAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[0m\033[1;32m");
+                        		scanf("%d", &confirmar_salvar);	
+								if(confirmar_salvar)
+								{
+									for(int j = 0; j < 10; j++)
+									{
+										permissao[id][j] = permissao_2[j];
+																			
+									}
+																										
 									salvar_user(cont, user, senha, ID, permissao);	
-									printf("\n\t\033[1;32m[SUCESSO] Senha salva!\033[0m\n");
+                            		printf("\n\t\033[1;32m[INFO] Dados atualizados no arquivo com sucesso!\033[0m\n");
+																
 								}
 								else
                 				{
-                					printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user[id]);
+                					printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user_novo);
 								}
 							}
                 			else
                 			{
-                				printf("\n\t\033[1;33m[AVISO] Usuario nao existe no sistema....\033[0m\n");
+                				printf("\n\t\033[1;33m [AVISO] Alteracoes descartadas para este usuario.\033[0m\n");
 							}	
-						
-														
-						Sleep(2000);
-						
-						break;	
-            			
-            			case 2://case 1 (editar usuario) -> case 2 (editar permissao)
-            				system("cls");         
-        					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");             
-        					printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[1;32m  [2] - \033[0m\033[1;42m EDITAR PERMISSAO \033[0m  [3]\033[0m - EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");        
-							printf("\n\t\033[1;34m ID ................ :\033[1;32m ");                   				
-                			scanf("%d",&id);
-							
-							if (strcmp(user[id], "") == 0) //se a string (strcmp(user[id], "") == 0) estiver vazia nao vai entrar
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m nao pode ser editado\n");
-								Sleep(2000);
-								break;
-							}		
-							
-							if ((id == 0) || (id == 1000)) //nao deixa trocar o nome do root E se a string (strcmp(user[id], "") == 0) está vazia
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m [\033[1;32m root \033[0m]\033[1;33m nao pode ser editado\n");
-								printf("\n\t\033[1;32mPressione ENTER para voltar ao menu...\033[0m");
-								system("pause>nul");	
-														
-							}
-							else
-							{
-								for(int i = 0; i< *cont; i++)
-								{
-																	
-									if(id == ID[i])
-									{
-										usuario_encontrado = 1;
-										
-                    				}
-								}
-								
-								if(usuario_encontrado == 1) 
-								{	
-									system("cls");
-									printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");             
-        							printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[1;32m  [2] - \033[0m\033[1;42m EDITAR PERMISSAO \033[0m  [3]\033[0m - EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        							printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");
-									printf("\n\t\033[1;34m ID ........ :\033[1;32m %d",id);
-									printf("\n\t\033[1;34m USUARIO ... :\033[1;32m %s \n", user[id]); 
-									
-									printf("\n\t\033[1;33m            PERMISSOES: \033[0m\n\n");     			
-                                    printf("\t\033[1;34m Cadastrar? ........ NAO [0]  SIM [1] > \033[1;32m ");    				
-                                    scanf("%d", &permissao_2[0]);          				
-                                    printf("\t\033[1;34m Venda? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[1]);           			
-                                    printf("\t\033[1;34m Comprar? .......... NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[2]);  				 				
-                                    printf("\t\033[1;34m caixa? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[3]);      			     			
-                                    printf("\t\033[1;34m cofre? ............ NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[4]);      			     			
-                                    printf("\t\033[1;34m estoque? .........  NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[5]);      			     			
-                                    printf("\t\033[1;34m pesquisar? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[6]);  				 				
-                                    printf("\t\033[1;34m editar produto? ... NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[7]);      			     			
-                                    printf("\t\033[1;34m relatorio? ........ NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[8]);    			 				
-                                    printf("\t\033[1;34m ususario? ......... NAO [0]  SIM [1] > \033[1;32m ");     			
-                                    scanf("%d", &permissao_2[9]);    			 
-                                           
-                                    printf("\n\t\033[1;32m [SUCESSO] MODIFICACAO REALIZADA!\033[0m\n");
-                                    printf("\n\t\033[1;34m GOSTARIA DE SALVAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[0m\033[1;32m");
-                        			scanf("%d", &confirmar_salvar);	
-									if(confirmar_salvar)
-									{
-										for(int i = 0; i < 10; i++)
-										{
-											permissao[id][i] = permissao_2[i];
-																				
-										}
-																										
-										salvar_user(cont, user, senha, ID, permissao);	
-                            			printf("\n\t\033[1;32m[INFO] Dados atualizados no arquivo com sucesso!\033[0m\n");
-																
-									}
-									else
-                					{
-                						printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user_novo);
-									}
-								}
-                				else
-                				{
-                					printf("\n\t\033[1;33m [AVISO] Alteracoes descartadas para este usuario.\033[0m\n");
-								}	
 						
 								Sleep(2000);	
 							}// final do else do 	if(id == 0)
 																		
 						   
-						break;
+					break;
 					
-					    case 3://case 1 (editar usuario) -> case 3 (editar nome do user)
+					case 3://case 1 (editar usuario) -> case 3 (editar nome do user)
 					    	
-					    	system("cls");         
-                			printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");          
-        					printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3] - \033[0m\033[1;42m EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");      
+					   	system("cls");         
+                		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");          
+        				printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3] - \033[0m\033[1;42m EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");      
                 
-                			printf("\n\t\033[1;34m ID ........... :\033[1;32m ");                   				
-                			scanf("%d", &id);
-							
-							if (strcmp(user[id], "") == 0) //se a string (strcmp(user[id], "") == 0) estiver vazia nao vai entrar
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m nao pode ser editado\n");
-								Sleep(2000);
-								break;
-							}
-														
-							if ((id == 0) || (id == 1000))  //nao deixa trocar o nome do root E se a string (strcmp(user[id], "") == 0) está vazia
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m [\033[1;32m root \033[0m]\033[1;33m nao pode ser editado\n");
-								printf("\n\t\033[1;32mPressione ENTER para voltar ao menu...\033[0m");
-								system("pause>nul");	
-														
-							}
-							else
-							{
-								for(int i = 0; i< *cont; i++)
-								{
-																	
-									if(id == ID[i])
-									{
-										usuario_encontrado = 1;
-										
-                    				}
-								}
+                		printf("\n\t\033[1;34m ID ........... :\033[1;32m ");                   				
+                		scanf("%d", &id);
 								
-								if(usuario_encontrado == 1) 
-								{	
-											
-									system("cls");         
-                					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");          
-        							printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3] - \033[0m\033[1;42m EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
-        							printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");      
-                					printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", id);                   				
-                					printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s",user[id]);
-									printf("\n\t\033[1;34m NOVO USUARIO ... :\033[1;32m ");                 
-                					scanf("%29s", user_novo);                         			    
-                					printf("\n\t\033[1;34m GOSTARIA SALVAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[0m\033[1;32m");
-                        			scanf("%d", &confirmar_salvar);	
-									if(confirmar_salvar)
-									{
-										strcpy(user[id], user_novo);
-										
-										salvar_user(cont, user, senha, ID, permissao);	
-                            			printf("\n\t\033[1;32m[INFO] Dados atualizados no arquivo com sucesso!\033[0m\n");
-									}
-									else
-                					{
-                						printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user_novo);
-									}
-								}
-                				else
-                				{
-                					printf("\n\t\033[1;33m[AVISO] Usuario nao existe no sistema....\033[0m\n");
-								}	
-						
-								Sleep(2000);	
-							}// final do else do ((id == 0)||(id == 1000))
-											
-						break;//final do case 3 (editar usuario)	
-						
-						case 4://case 1 (editar usuario) -> case 4 (deletar user)
-							system("cls");         
-                			printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
-        					printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO  [3]\033[0m - EDITAR USUARIOS \033[1;32m  [4] - \033[0m\033[1;42m DELETAR USUARIO \033[0m \033[1;34m °° \n");         
-        					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");    
-                
-                			printf("\n\t\033[1;34m ID ........... :\033[1;32m ");                   				
-                			scanf("%d", &id);
-						
-							if (strcmp(user[id], "") == 0) //se a string (strcmp(user[id], "") == 0) estiver vazia nao vai entrar
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m nao pode ser editado\n");
-								Sleep(2000);
-								break;
-							}
-							
-							if ((id == 0) || (id == 1000))  //nao deixa trocar o nome do root 
-							{
-								printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m [\033[1;32m root \033[0m]\033[1;33m nao pode ser editado\n");
-								printf("\n\t\033[1;32mPressione ENTER para voltar ao menu...\033[0m");
-								system("pause>nul");	
+						if ((id == 0) || (id == 1000))  //nao deixa trocar o nome do root E se a string (strcmp(user[id], "") == 0) está vazia
+						{
+							printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m [\033[1;32m root \033[0m]\033[1;33m nao pode ser editado\n");
+							printf("\n\t\033[1;32mPressione ENTER para voltar ao menu...\033[0m");
+							system("pause>nul");	
 														
-							}
-							else
+						}
+						else
+						{
+							for(int i = 0; i< *cont; i++)
 							{
-								for(int i = 0; i< *cont; i++)
+													
+								if(id == ID[i])
 								{
-																	
-									if(id == ID[i])
-									{
-										usuario_encontrado = 1;
-									
-									}
+									usuario_encontrado = 1;
 								}
-								
-								if(usuario_encontrado == 1) 
-								{	
+						}
+							
+							if(usuario_encontrado == 1) 
+							{	
 											
-									system("cls");         
-                					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
-        							printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO  [3]\033[0m - EDITAR USUARIOS \033[1;32m  [4] - \033[0m\033[1;42m DELETAR USUARIO \033[0m \033[1;34m °° \n");         
-        							printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");    
-									printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", id);                   				
-                					printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s ",user[id]);                 
-                					printf("\n\n\t\033[1;31m[ATENCAO] O USUARIO SERA DELETADO ... \033[1;32m \n");   
-                        			printf("\t\033[1;34mGOSTARIA DE DELETAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[1;32m ");
-									scanf("%d", &confirmar_salvar);	
-									if(confirmar_salvar)
-									{
-										for(int i = 0; i < PERMISSAO; i++)
-										{
-												permissao[id][i] = 0;
-										}
-										strcpy(user[id], "");
-										senha[id]=0;
+								system("cls");         
+                				printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");          
+        						printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO\033[1;32m   [3] - \033[0m\033[1;42m EDITAR USUARIOS \033[0m  [4]\033[0m - DELETAR USUARIO \033[1;34m °° \n");         
+        						printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");      
+                				printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", id);                   				
+                				printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s",user[id]);
+								printf("\n\t\033[1;34m NOVO USUARIO ... :\033[1;32m ");                 
+                				scanf("%29s", user_novo);                         			    
+                				printf("\n\t\033[1;34m GOSTARIA SALVAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[0m\033[1;32m");
+                        		scanf("%d", &confirmar_salvar);	
+								if(confirmar_salvar)
+								{
+									strcpy(user[id], user_novo);
 										
-										salvar_user(cont, user, senha, ID, permissao);	
-                            			printf("\n\t\033[1;32m[INFO] Dados atualizados no arquivo com sucesso!\033[0m\n");
-									}
-									else
-                					{
-                						printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user_novo);
-									}
+									salvar_user(cont, user, senha, ID, permissao);	
+                            		printf("\n\t\033[1;32m[INFO] Dados atualizados no arquivo com sucesso!\033[0m\n");
 								}
-                				else
+								else
                 				{
-                					printf("\n\t\033[1;33m[AVISO] Usuario nao existe no sistema....\033[0m\n");
-								}	
-						
-								Sleep(2000);	
-							}// final do else do ((id == 0)||(id == 1000))
-						
-						
-						
-						break;	
-									           			
-					}//final do switch
-            	            	         		
-				}//final do DO do case 2
-            	while(menu =0);           
-            	
-			break;//fincal do case 2
+                					printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi editado....\033[0m\n",user_novo);
+								}
+						}
+                		else
+                		{
+                			printf("\n\t\033[1;33m[AVISO] Usuario nao existe no sistema....\033[0m\n");
+						}	
+					
+					Sleep(2000);	
+					}// final do else do ((id == 0)||(id == 1000))
+							
+					break;//final do case 3 (editar usuario)	
+										
+					case 4: // case 1 (editar usuario) -> case 4 (deletar user)
+    					
+						manutencao();
+					
+						/*
+						system("cls");         
+    					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
+    					printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO  [3]\033[0m - EDITAR USUARIOS \033[1;32m  [4] - \033[0m\033[1;42m DELETAR USUARIO \033[0m \033[1;34m °° \n");         
+    					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");    
+
+    					printf("\n\t\033[1;34m Digite o ID para DELETAR ........... :\033[1;32m ");                   				
+    					scanf("%d", &id);
+
+    					if ((id == 0) || (id == 1000))  // Não deixa deletar ou alterar o administrador root 
+    					{
+        					printf("\n\t\033[1;31m[ATENCAO]\033[1;33m O usuario\033[0m [\033[1;32m root \033[0m]\033[1;33m nao pode ser deletado do sistema!\n");
+        					printf("\n\t\033[1;32mPressione ENTER para voltar ao menu...\033[0m");
+        					system("pause>nul");	
+    					}
+    					else
+    					{
+        
+        					usuario_encontrado = 0;
+        					indice_alvo = -1; // Guardará em qual linha da matriz o ID foi achado
+
+        					// Percorre os usuários ativos na memória
+        					for(int i = 0; i < *cont; i++)
+        					{											
+            					if(id == ID[i])
+            					{
+                					usuario_encontrado = 1;
+                					indice_alvo = i; // Armazena o índice da linha física
+                					break; // Achou, pode parar o laço
+           						 }
+        					}
+        
+        					if(usuario_encontrado == 1 && indice_alvo != -1) 
+        					{	
+            					system("cls");         
+            					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
+            					printf("\t\033[1;34m °°\033[0m  [1]\033[0m - TROCAR SENHA\033[0m  [2]\033[0m - EDITAR PERMISSAO  [3]\033[0m - EDITAR USUARIOS \033[1;32m  [4] - \033[0m\033[1;42m DELETAR USUARIO \033[0m \033[1;34m °° \n");         
+            					printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");    
+            
+            					// CORREÇÃO 2: Exibe os dados baseados no 'indice_alvo' encontrado, não na variável 'id'
+           						printf("\n\t\033[1;34m ID ............. :\033[0m [\033[1;32m # %d \033[0m]", ID[indice_alvo]);                   				
+            					printf("\n\t\033[1;34m USUARIO ........ :\033[1;32m %s ", user[indice_alvo]);                 
+            					printf("\n\n\t\033[1;31m[ATENCAO] O USUARIO SERA DELETADO DEFINITIVAMENTE ... \033[1;32m \n");   
+            					printf("\t\033[1;34mGOSTARIA DE DELETAR ?\033[1;33m [1-SIM / 2-NAO] -> \033[1;32m ");
+            					scanf("%d", &confirmar_salvar);	
+            
+            					if(confirmar_salvar == 1)
+            					{
+                				// CORREÇÃO 3: Desloca todos os usuários seguintes uma posição para trás
+                				// Isso remove o usuário de verdade e evita deixar "buracos" vazios na memória
+                					for(int i = indice_alvo; i < (*cont) ; i++)
+                					{
+                  					 // ID[i] = id+1;
+                   					// strcpy(user[i], user[i + 1]);
+                    				//senha[i] = senha[i + 1];
+                   
+										strcpy(user[indice_alvo], "xxx_null_xxx");
+                    			
+										for(int j = 0; j < PERMISSAO; j++)
+                    					{
+                        					permissao[indice_alvo][j] = 7;
+											//permissao[i][j] = permissao[i + 1][j];
+                   				 		}
+                					}
                 
-           
+               						(*cont)--;
+                			        salvar_user(cont, user, senha, ID, permissao);	
+                					printf("\n\t\033[1;32m[INFO] Usuario deletado e dados atualizados no arquivo com sucesso!\033[0m\n");
+            					}
+            					else
+            					{
+                  					printf("\n\t\033[1;33m[AVISO] Operacao cancelada. O usuario %s nao foi deletado.\033[0m\n", user[indice_alvo]);
+            					}
+        					}
+        					else
+        					{
+            					printf("\n\t\033[1;33m[AVISO] O ID %d nao existe no sistema....\033[0m\n", id);
+        					}	
+
+        					Sleep(2000);	
+   						} // final do else do ((id == 0)||(id == 1000))
+					     */           
+                	break;//final do case 4 do segundo switch - deletar usuario
 				
-			case 3:// case 3 do primeiro switch
+				}//final do switch 2
+            	            	         		
+			}//final do DO do case 2 do primeiro switch
+            while(menu =0);           
+            
+			
+			break;//fincal do case 2 do primeiro switch
+            			
+			case 3:// case 3 do primeiro switch - mostra todos os usuarios
     		
 				system("cls");         
         		printf("\t\033[1;34m °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°° \n");         
@@ -1339,8 +1650,7 @@ void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], 
 
 				for(int i = 0; i < *cont; i++) 
 				{
-   					if (strcmp(user[i], "") != 0)
-   					{
+   				
 					   	printf("\t \033[1;34m°°\033[1;36m  \t# %4d  \033[1;34m°°\033[1;36m     \t   %-20s\033[1;34m  °°\033[0m ", ID[i], user[i]);
       					
 					    for(int j = 0; j < PERMISSAO; j++) 
@@ -1351,7 +1661,7 @@ void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], 
   	 					
 						   }
    							printf("   \033[1;34m°°\033[0m\n");
-    				}		
+    				
 					printf("\t \033[1;34m°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\033[0m\n");  
    				}
     			
@@ -1363,22 +1673,25 @@ void cadastrar_usuario(int *cont, char user[USUARIOS][30], int senha[USUARIOS], 
     } 
 	while(menu != 0); 
 }
+
 //============================================================== MAIN INICIO ========================================================================================== ======================================
 int main()
 {
    
-	char nome_produto[MAX][30],user[USUARIOS][30],usuario_digitado[USUARIOS][30], user_login[30]; 
-    int codigos[MAX], estoques[MAX], total_produtos = 1, menu,senha[USUARIOS], ID[USUARIOS], permissao[USUARIOS][10],senha_digitada[USUARIOS],ID_login, cont = 0 ;
-    float precos[MAX], saldo_caixa, cofre ;
         
-	
+
+	char nome_produto[MAX][30],user[10][30],user_login[30],data[20], hora[20], data_deposito[HISTORY][20], hora_deposito[HISTORY][20]; 
+    char historico_user_login[HISTORY][30];
+	int codigos[MAX], estoques[MAX], total_produtos = 1, menu,senha[10], ID[10], ID_login, permissao[10][10], cont = 1, qt_deposito = 1,conta[HISTORY],agencia[HISTORY] ;
+    float precos[MAX], saldo_caixa, cofre, historico_valor_deposito[HISTORY] ;
+        
 	ping(); 
     
 	carregar(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
     carregar_user(&cont, user, senha, ID, permissao);
-		
-	login(&cont, user, senha, ID, permissao, user_login, &ID_login); 
-	
+	carregar_cofre(&cofre, &saldo_caixa, &qt_deposito,conta,agencia, historico_valor_deposito, data_deposito, hora_deposito, historico_user_login);
+	login(&cont, user, senha, ID, permissao, user_login, &ID_login); 	
+	 
 	do
     {
       	printf("\n\n");	
@@ -1400,15 +1713,15 @@ int main()
 		printf("\t\033[1;34m°°  \033[1;31m[0]\033[0m - SAIR DO SISTEMA               \033[1;34m \033[0m  \033[1;32m[11]\033[0m - LOGOUT                \033[1;34m°°\033[0m\n");				
 		printf("\t\033[1;34m°°\033[0m                                     \033[1;34m \033[0m                               \033[1;34m °°\033[0m\n");
 		printf("\t\033[1;34m°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\033[0m\n");
-		printf("\t\033[1;34m°° \033[1;33m USER ... :\033[1;32m %-10s      \033[1;34m°°°°°°°°°°°°°°°°°°°°°°°\033[1;34m  Versao :\033[1;32m 8.06.b \033[1;34m°°\033[0m\n",user_login);	
+		printf("\t\033[1;34m°° \033[1;33m USER ... :\033[1;32m %-10s      \033[1;34m°°°°°°°°°°°°°°°°°°°°°°°\033[1;34m  Versao :\033[1;32m 8.13.b \033[1;34m°°\033[0m\n",user_login);	
 		printf("\t\033[1;34m°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°\033[0m\n");
+	
 		printf("\t\033[1;32m -> ");
 		scanf("%d",&menu);
 	    	 
 		switch(menu)
 		{
-			
-	    	case 1: // CADASTRO DOS PRODUTOS
+		case 1: // CADASTRO DOS PRODUTOS
     
     			if (permissao[ID_login][0] == 1) 
     			{
@@ -1458,7 +1771,7 @@ int main()
 				if (permissao[ID_login][3] == 1) 
     			{
         			caixa(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
-        			salvar_rapido(&total_produtos, codigos, nome_produto, precos, estoques, &saldo_caixa, &cofre);
+        		
    			 	}
    			 	else 
     			{
@@ -1472,7 +1785,10 @@ int main()
 				
 				if (permissao[ID_login][4] == 1) 
     			{
-        			cofre_caixa(&cofre);
+        		
+					cofre_caixa(&cofre, &saldo_caixa, user_login, data, hora, &qt_deposito,conta,agencia,historico_valor_deposito, data_deposito, hora_deposito, historico_user_login);
+					//salvar_cofre(&cofre, &saldo_caixa, &qt_deposito,conta, agencia, historico_valor_deposito, data_deposito, hora_deposito, historico_user_login);
+
    			 	}
    			 	else 
     			{
@@ -1543,18 +1859,21 @@ int main()
 			     				 
         		if (permissao[ID_login][9] == 1) 
     			{
-        			cadastrar_usuario(&cont, user, senha, ID, permissao);
+        			cadastrar_usuario(&cont, user, senha, ID, permissao, user_login);
    			 	}
    			 	else 
     			{
-       				printf("\n\t\033[1;31m[ACESSO NEGADO] Seu usuario nao tem permissao para cadastrar produtos.\033[0m\n");
+       					
+					printf("\n\t\033[1;31m[ACESSO NEGADO] Seu usuario nao tem permissao para cadastrar produtos.\033[0m\n");
         			Sleep(2000);
     			} 
 				     
 			break; 	 	
 			
 			case 11:
+				
 					login(&cont, user, senha, ID, permissao, user_login, &ID_login);
+					
 			break;	
 	 		
 		 
@@ -1562,11 +1881,11 @@ int main()
         		if(menu != 0) manutencao();
 			break; 
 	 	}
-    
     }
     while(menu!=0);
- 
-   salvar(&total_produtos, codigos, nome_produto, precos, estoques,&saldo_caixa,&cofre);
-     
+
  return 0;   
 }
+
+
+
